@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rock Paper Scissors — Play vs Bot By Adeeb Ali Developer</title>
+  <meta name="description" content="A polished Rock Paper Scissors game built with vanilla HTML, CSS and JavaScript. Play against a bot, track your streak, and win the match.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c0e0a;
+      --panel: #151812;
+      --panel-2: #1c2016;
+      --line: #2a3022;
+      --text: #f2f5ec;
+      --muted: #949c86;
+      --lime: #B9FF66;
+      --lime-dim: #8fcc4a;
+      --lose: #ff7a66;
+      --draw: #e8d36a;
+      --radius: 18px;
+      --display: "Space Grotesk", system-ui, sans-serif;
+      --body: "Inter", system-ui, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { color-scheme: dark; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body);
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 28px 16px 24px;
+    }
+    .app { width: 100%; max-width: 760px; display: grid; gap: 20px; }
+
+    /* Header */
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: var(--lime); color: #10140a;
+      display: grid; place-items: center; font-size: 22px;
+    }
+    h1 { font-family: var(--display); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+    .sub { color: var(--muted); font-size: .85rem; }
+    .mode { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .85rem; }
+    select {
+      background: var(--panel); color: var(--text);
+      border: 1px solid var(--line); border-radius: 10px;
+      padding: 8px 12px; font: inherit; cursor: pointer;
+    }
+
+    /* Scoreboard */
+    .scoreboard {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;
+    }
+    .score {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 14px 16px; text-align: center;
+    }
+    .score .label { color: var(--muted); font-size: .8rem; }
+    .score .num { font-family: var(--display); font-size: 2.4rem; font-weight: 700; line-height: 1.1; margin-top: 2px; }
+    .score.you { border-color: var(--lime); }
+    .score.you .num { color: var(--lime); }
+    .score.bot .num { color: var(--lose); }
+    .score.draws .num { color: var(--draw); }
+
+    /* Arena */
+    .arena {
+      background: var(--panel); border: 1px solid var(--line);
+      border-radius: 24px; padding: 26px 18px 22px;
+      display: grid; gap: 18px;
+    }
+    .hands { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; }
+    .side { text-align: center; }
+    .side .who { color: var(--muted); font-size: .85rem; margin-bottom: 8px; }
+    .hand {
+      width: clamp(104px, 24vw, 150px); aspect-ratio: 1;
+      margin: 0 auto; border-radius: 50%;
+      background: var(--panel-2); border: 2px solid var(--line);
+      display: grid; place-items: center;
+      font-size: clamp(3rem, 10vw, 4.6rem);
+      transition: border-color .2s, background .2s;
+      user-select: none;
+    }
+    .hand.win { border-color: var(--lime); background: rgba(185,255,102,.09); }
+    .hand.lose { border-color: var(--lose); opacity: .75; }
+    .hand.draw { border-color: var(--draw); }
+    #botHand { transform: scaleX(-1); }
+    #botHand > span { display: inline-block; transform: scaleX(1); }
+    .vs { font-family: var(--display); color: var(--muted); font-weight: 600; }
+
+    @keyframes shake {
+      0%, 100% { transform: translateY(0) rotate(0); }
+      25% { transform: translateY(-16px) rotate(-8deg); }
+      50% { transform: translateY(6px) rotate(6deg); }
+      75% { transform: translateY(-12px) rotate(-5deg); }
+    }
+    .shaking .hand > span { animation: shake .7s ease-in-out; display: inline-block; }
+
+    .status { text-align: center; min-height: 3.2em; }
+    .status .headline { font-family: var(--display); font-size: 1.5rem; font-weight: 700; }
+    .status .detail { color: var(--muted); font-size: .92rem; }
+    .status.win .headline { color: var(--lime); }
+    .status.lose .headline { color: var(--lose); }
+    .status.draw .headline { color: var(--draw); }
+
+    /* Choices */
+    .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .choice {
+      background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 16px 8px 12px; cursor: pointer; font: inherit;
+      display: grid; gap: 4px; justify-items: center;
+      transition: border-color .15s, background .15s, transform .1s;
+    }
+    .choice .emoji { font-size: 2.2rem; line-height: 1.1; }
+    .choice .name { font-family: var(--display); font-weight: 600; }
+    .choice kbd {
+      font-family: var(--body); font-size: .72rem; color: var(--muted);
+      border: 1px solid var(--line); border-radius: 6px; padding: 0 6px;
+    }
+    .choice:hover:not(:disabled) { border-color: var(--lime); background: rgba(185,255,102,.06); }
+    .choice:active:not(:disabled) { transform: scale(.97); }
+    .choice:disabled { opacity: .45; cursor: not-allowed; }
+
+    /* Match over */
+    .again {
+      display: none; justify-self: center;
+      background: var(--lime); color: #10140a; border: 0; border-radius: 12px;
+      padding: 12px 22px; font: 600 1rem var(--display); cursor: pointer;
+    }
+    .again:hover { background: var(--lime-dim); }
+    .over .again { display: inline-block; }
+    .over .choices { display: none; }
+
+    /* Lower panels */
+    .lower { display: grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+    .box { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+    .box h2 { font-family: var(--display); font-size: 1rem; font-weight: 600; margin-bottom: 10px; }
+    .history { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; min-height: 32px; }
+    .history li {
+      font-size: .8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px;
+      border: 1px solid var(--line); background: var(--panel-2);
+    }
+    .history li.w { color: var(--lime); border-color: rgba(185,255,102,.4); }
+    .history li.l { color: var(--lose); border-color: rgba(255,122,102,.4); }
+    .history li.d { color: var(--draw); border-color: rgba(232,211,106,.4); }
+    .history .empty { border: 0; background: none; color: var(--muted); font-weight: 400; padding-left: 0; }
+    .stats { display: grid; gap: 8px; font-size: .9rem; }
+    .stats div { display: flex; justify-content: space-between; color: var(--muted); }
+    .stats strong { color: var(--text); font-family: var(--display); }
+    .link-btn {
+      margin-top: 10px; background: none; border: 0; color: var(--muted);
+      font: inherit; font-size: .8rem; text-decoration: underline; cursor: pointer; padding: 0;
+    }
+    .link-btn:hover { color: var(--text); }
+
+    footer { color: var(--muted); font-size: .82rem; text-align: center; margin-top: 4px; }
+    footer a { color: var(--lime); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    :focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
+
+    @media (max-width: 560px) {
+      .lower { grid-template-columns: 1fr; }
+      .score .num { font-size: 2rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .shaking .hand > span { animation: none; }
+      * { transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app" id="app">
+    <header>
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">✊</div>
+        <div>
+          <h1>Rock Paper Scissors By Adeeb Ali Developer</h1>
+          <p class="sub">You vs the bot. First to reach the target wins.</p>
+        </div>
+      </div>
+      <label class="mode">Match
+        <select id="target" aria-label="Rounds needed to win the match">
+          <option value="3">First to 3</option>
+          <option value="5" selected>First to 5</option>
+          <option value="10">First to 10</option>
+        </select>
+      </label>
+    </header>
+
+    <section class="scoreboard" aria-label="Scoreboard">
+      <div class="score you"><div class="label">You</div><div class="num" id="youScore">0</div></div>
+      <div class="score draws"><div class="label">Draws</div><div class="num" id="drawScore">0</div></div>
+      <div class="score bot"><div class="label">Bot</div><div class="num" id="botScore">0</div></div>
+    </section>
+
+    <section class="arena" id="arena">
+      <div class="hands">
+        <div class="side">
+          <div class="who">You</div>
+          <div class="hand" id="youHand" aria-hidden="true"><span>✊</span></div>
+        </div>
+        <div class="vs">VS</div>
+        <div class="side">
+          <div class="who">Bot</div>
+          <div class="hand" id="botHand" aria-hidden="true"><span>✊</span></div>
+        </div>
+      </div>
+
+      <div class="status" id="status" role="status" aria-live="polite">
+        <div class="headline">Make your move</div>
+        <div class="detail">Pick a hand below, or press R, P or S.</div>
+      </div>
+
+      <div class="choices" id="choices">
+        <button class="choice" data-choice="rock"><span class="emoji" aria-hidden="true">✊</span><span class="name">Rock</span><kbd>R</kbd></button>
+        <button class="choice" data-choice="paper"><span class="emoji" aria-hidden="true">✋</span><span class="name">Paper</span><kbd>P</kbd></button>
+        <button class="choice" data-choice="scissors"><span class="emoji" aria-hidden="true">✌️</span><span class="name">Scissors</span><kbd>S</kbd></button>
+      </div>
+      <button class="again" id="again">Play again</button>
+    </section>
+
+    <section class="lower">
+      <div class="box">
+        <h2>Recent rounds</h2>
+        <ul class="history" id="history"><li class="empty">No rounds yet.</li></ul>
+      </div>
+      <div class="box">
+        <h2>Your stats</h2>
+        <div class="stats">
+          <div>Matches won <strong id="statWins">0</strong></div>
+          <div>Matches lost <strong id="statLosses">0</strong></div>
+          <div>Best streak <strong id="statStreak">0</strong></div>
+        </div>
+        <button class="link-btn" id="resetStats">Reset stats</button>
+      </div>
+    </section>
+
+    <footer>
+      Built with HTML, CSS and JavaScript By Adeeb Ali Developer ·
+      <a href="https://github.com/YOUR-USERNAME/rock-paper-scissors-js" target="_blank" rel="noopener">View on GitHub</a>
+    </footer>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const CHOICES = {
+        rock:     { emoji: "✊", beats: "scissors", verb: "crushes" },
+        paper:    { emoji: "✋", beats: "rock",     verb: "covers" },
+        scissors: { emoji: "✌️", beats: "paper",    verb: "cuts" }
+      };
+      const KEYS = { r: "rock", p: "paper", s: "scissors" };
+      const STORAGE_KEY = "rps-stats-v1";
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      const $ = (id) => document.getElementById(id);
+      const els = {
+        app: $("app"), arena: $("arena"), status: $("status"),
+        youScore: $("youScore"), botScore: $("botScore"), drawScore: $("drawScore"),
+        youHand: $("youHand"), botHand: $("botHand"),
+        choices: document.querySelectorAll(".choice"),
+        history: $("history"), target: $("target"), again: $("again"),
+        statWins: $("statWins"), statLosses: $("statLosses"), statStreak: $("statStreak"),
+        resetStats: $("resetStats")
+      };
+
+      // ---- Storage (safe) ----
+      function loadStats() {
+        try {
+          const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+          if (s && typeof s === "object") return { wins: s.wins | 0, losses: s.losses | 0, best: s.best | 0 };
+        } catch (e) { /* storage unavailable */ }
+        return { wins: 0, losses: 0, best: 0 };
+      }
+      function saveStats() {
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stats)); } catch (e) { /* ignore */ }
+      }
+
+      // ---- State ----
+      let stats = loadStats();
+      let state;
+      function freshState() {
+        return { you: 0, bot: 0, draws: 0, streak: 0, locked: false, over: false, history: [] };
+      }
+      state = freshState();
+
+      // ---- Game logic ----
+      function botPick() {
+        const keys = Object.keys(CHOICES);
+        return keys[Math.floor(Math.random() * keys.length)];
+      }
+      function judge(player, bot) {
+        if (player === bot) return "draw";
+        return CHOICES[player].beats === bot ? "win" : "lose";
+      }
+      function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+      function play(choice) {
+        if (state.locked || state.over) return;
+        state.locked = true;
+        setChoicesDisabled(true);
+        clearHandStates();
+        els.youHand.firstElementChild.textContent = "✊";
+        els.botHand.firstElementChild.textContent = "✊";
+        setStatus("", "Rock… paper… scissors…", "");
+
+        els.arena.classList.remove("shaking");
+        void els.arena.offsetWidth; // restart animation
+        els.arena.classList.add("shaking");
+
+        window.setTimeout(() => reveal(choice), reduceMotion ? 0 : 720);
+      }
+
+      function reveal(choice) {
+        const bot = botPick();
+        const result = judge(choice, bot);
+        els.arena.classList.remove("shaking");
+        els.youHand.firstElementChild.textContent = CHOICES[choice].emoji;
+        els.botHand.firstElementChild.textContent = CHOICES[bot].emoji;
+
+        if (result === "win") {
+          state.you++; state.streak++;
+          if (state.streak > stats.best) { stats.best = state.streak; }
+          els.youHand.classList.add("win"); els.botHand.classList.add("lose");
+          setStatus("win", "You win this round", `${cap(choice)} ${CHOICES[choice].verb} ${bot}.`);
+        } else if (result === "lose") {
+          state.bot++; state.streak = 0;
+          els.botHand.classList.add("win"); els.youHand.classList.add("lose");
+          setStatus("lose", "Bot wins this round", `${cap(bot)} ${CHOICES[bot].verb} ${choice}.`);
+        } else {
+          state.draws++;
+          els.youHand.classList.add("draw"); els.botHand.classList.add("draw");
+          setStatus("draw", "Draw", `You both picked ${choice}.`);
+        }
+
+        state.history.unshift(result);
+        state.history = state.history.slice(0, 10);
+        render();
+        checkMatchEnd();
+      }
+
+      function checkMatchEnd() {
+        const target = parseInt(els.target.value, 10);
+        if (state.you >= target || state.bot >= target) {
+          state.over = true;
+          const won = state.you >= target;
+          if (won) stats.wins++; else stats.losses++;
+          saveStats();
+          renderStats();
+          els.app.classList.add("over");
+          setStatus(won ? "win" : "lose",
+            won ? "You won the match" : "The bot won the match",
+            `Final score ${state.you} to ${state.bot}. Play again to start a new match.`);
+          els.again.focus();
+        } else {
+          state.locked = false;
+          setChoicesDisabled(false);
+          saveStats();
+        }
+      }
+
+      function newMatch() {
+        state = freshState();
+        els.app.classList.remove("over");
+        clearHandStates();
+        els.youHand.firstElementChild.textContent = "✊";
+        els.botHand.firstElementChild.textContent = "✊";
+        setStatus("", "Make your move", "Pick a hand below, or press R, P or S.");
+        setChoicesDisabled(false);
+        render();
+      }
+
+      // ---- Rendering ----
+      function setStatus(kind, headline, detail) {
+        els.status.className = "status" + (kind ? " " + kind : "");
+        els.status.innerHTML = "";
+        const h = document.createElement("div"); h.className = "headline"; h.textContent = headline;
+        const d = document.createElement("div"); d.className = "detail"; d.textContent = detail;
+        els.status.append(h, d);
+      }
+      function clearHandStates() {
+        [els.youHand, els.botHand].forEach((h) => h.classList.remove("win", "lose", "draw"));
+      }
+      function setChoicesDisabled(v) { els.choices.forEach((b) => (b.disabled = v)); }
+
+      function render() {
+        els.youScore.textContent = state.you;
+        els.botScore.textContent = state.bot;
+        els.drawScore.textContent = state.draws;
+
+        els.history.innerHTML = "";
+        if (!state.history.length) {
+          const li = document.createElement("li"); li.className = "empty"; li.textContent = "No rounds yet.";
+          els.history.appendChild(li);
+        } else {
+          const label = { win: "Win", lose: "Loss", draw: "Draw" };
+          const cls = { win: "w", lose: "l", draw: "d" };
+          state.history.forEach((r) => {
+            const li = document.createElement("li");
+            li.className = cls[r]; li.textContent = label[r];
+            els.history.appendChild(li);
+          });
+        }
+        renderStats();
+      }
+      function renderStats() {
+        els.statWins.textContent = stats.wins;
+        els.statLosses.textContent = stats.losses;
+        els.statStreak.textContent = stats.best;
+      }
+
+      // ---- Events ----
+      els.choices.forEach((btn) => btn.addEventListener("click", () => play(btn.dataset.choice)));
+      els.again.addEventListener("click", newMatch);
+      els.target.addEventListener("change", newMatch);
+      els.resetStats.addEventListener("click", () => {
+        stats = { wins: 0, losses: 0, best: 0 };
+        saveStats(); renderStats();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.ctrlKey || e.metaKey || e.altKey) return;
+        if (e.target && e.target.tagName === "SELECT") return;
+        const choice = KEYS[e.key.toLowerCase()];
+        if (choice) play(choice);
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
